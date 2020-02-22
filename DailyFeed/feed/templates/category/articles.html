@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %} {{ category.name}} {% endblock %}
+{% block navbar %}
+    {{ block.super }}
+    <div class="container">
+         <ul class="list-group list-group-horizontal">
+         <li class="list-group-item">
+             <b>
+                  <a class="col-lg-3 col-md-3 col-sm-6 col-xs-6" href="/category/{{ category.id }}/source">Źródła</a>
+             </b>
+         </li>
+        <li class="list-group-item"><b>
+            <a class="col-lg-3 col-md-3 col-sm-6 col-xs-6" href="/category/{{ category.id }}/source/new">Nowe źródło?</a>
+        </b></li>
+        <li class="list-group-item"><b>
+            <a class="col-lg-3 col-md-3 col-sm-6 col-xs-6" href="/category/{{ category.id }}/tags/new">Dodaj tagi</a></b>
+        </li>
+    </ul>
+    </div>
+{% endblock %}
+{% block content %}
+    <div class="container">
+    {% if articles|length > 0 %}
+        <h5>Tagi: </h5>
+            <ul class="list-group list-group-horizontal">
+            {% for tag in category.search_tags.all %}
+                <li class="list-group-item">{{ tag.name }}</li>
+            {% endfor %}
+            <li class="list-group-item list-group-item-action col-2"><a href="{% url 'category-view' category.id %}?bytags=1">Szukaj po tagach</a></li>
+            </ul>
+     {% endif %}
+    <table class="table">
+        <thead class="thead-light">
+            <tr>
+                <th scope="col">Opublikowane</th>
+                <th scope="col">Tytuł</th>
+                <th scope="col">Strona</th>
+            </tr>
+        </thead>
+        <tbody>
+             {% for line in articles %}
+                <tr>
+                    <td class="col-lg-2 col-md-2 col-sm-3 col-xs-3">{{ line.published }}</td>
+                    <td class="col-lg-8 col-md-8 col-sm-6 col-xs-6"><a href="{{ line.url }}">{{ line.title }}</a></td>
+                    <td class="col-lg-2 col-md-2 col-sm-3 col-xs-3">{{ line.website }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+{% endblock %}

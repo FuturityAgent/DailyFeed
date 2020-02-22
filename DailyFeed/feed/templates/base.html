@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %} Strona główna{% endblock %}</title>
+    {% include "bootstrap.html" %}
+
+</head>
+<body>
+    {% block javascript %}
+    {% endblock %}
+
+    {% block navbar %}
+        <div class="container">
+            <nav class="navbar navbar-expand navbar-light bg-light">
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="/">DailyFeed<span class="sr-only">(current)</span></a>
+                </li>
+            {% for category in categories %}
+                <li class="nav-item">
+                    <a class="nav-link col-lg-2 col-md-2 col-sm-4 col-xs-4" href="/category/{{ category.id }}">{{ category.name }}</a>
+                </li>
+            {% endfor %}
+                <li class="nav-item">
+                    <a class="nav-link col-lg-4 col-md-4 col-sm-6 col-xs-6" id="add_category" href="/category/new">
+                        <b>Nowa</b>
+                    </a>
+                </li>
+                </ul>
+            </div>
+        </nav>
+        </div>
+    {% endblock %}
+    {% block content %}
+    {% endblock %}
+
+</body>
+</html>
