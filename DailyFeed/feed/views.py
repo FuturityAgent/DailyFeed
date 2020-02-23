@@ -3,13 +3,13 @@ from django.views import View
 from django.views.generic.edit import CreateView
 from django.core.cache import cache
 from .models import Category, Source, SearchTag
-from .forms import SourceForm
+from .forms import SourceForm, FindSourceForm
 from .source_builder import get_all_rss, build_category_sources, check_if_source_exists
 import requests
 import re
 import itertools
 import feedparser
-import random
+import newspaper
 import time
 import datetime
 from urllib.parse import urlparse
@@ -81,11 +81,11 @@ class CategoryView(View):
 
         matching_entries = []
         # pdb.set_trace()
-        bytags = self.request.GET.get('bytags', False)
+        # bytags = self.request.GET.get('bytags', False)
 
         for e in all_entries:
-            link = e.link.lower() if not bytags else ''
-            if any([t.name.lower() in link or t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
+            # link = e.link.lower() if not bytags else ''
+            if any([t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
                 matching_entries.append(e)
 
         return matching_entries
@@ -131,6 +131,8 @@ class SourceCreateView(CreateView):
     def form_valid(self, form):
         response = super(SourceCreateView, self).form_valid(form)
         link = form.cleaned_data.get('link')
+        # if form.cleaned_data.get('not_rss'):
+        #     self.try_parse_website(link)
         parsed = feedparser.parse(link)
         entries = parsed.entries
         if len(entries) == 0:
@@ -144,6 +146,15 @@ class SourceCreateView(CreateView):
         category.sources.add(form.instance)
         cache.clear()
         return response
+
+    def try_parse_website(self, link):
+        pdb.set_trace()
+        news_website = newspaper.build(link)
+        news_website.download()
+        news_website.parse()
+        for line in news_website.articles:
+            print(line.title)
+
 
 
 class CategoryCreateView(CreateView):
@@ -166,4 +177,19 @@ class TagCreateView(CreateView):
         category.search_tags.add(form.instance)
         return response
 
+
+class FindSourcesView(View):
+    http_method_names = ['get', 'post']
+
+    def get(self, request):
+        form = FindSourceForm()
+        return render(request, "source/find.html", {"form":form})
+
+    def post(self, request):
+        form = FindSourceForm(request.POST)
+        discovered_feeds = []
+        if form.is_valid():
+            link = form.cleaned_data['link']
+            discovered_feeds = get_all_rss(link)
+        return render(request, "source/discovered.html",{"discovered_feeds": discovered_feeds})
 # Create your views here.

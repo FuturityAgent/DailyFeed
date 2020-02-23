@@ -27,5 +27,6 @@ urlpatterns = [
     path('category/new', views.CategoryCreateView.as_view(), name="new-category"),
     path('category/<int:id>/source', views.CategorySourcesView.as_view(), name='category-sources'),
     path("category/<int:id>/source/new", views.SourceCreateView.as_view(), name="new-source"),
-    path("category/<int:id>/tags/new", views.TagCreateView.as_view(), name="new-category-tag")
+    path("category/<int:id>/tags/new", views.TagCreateView.as_view(), name="new-category-tag"),
+    path("source/check", views.FindSourcesView.as_view() , name="find-source")
 ]

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Nowe źródło danych{% endblock %}
+{% block title %}Znajdź feedy{% endblock %}
 {% block content %}
     <div class="container">
         <form action="" method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <input type="submit" value="Dodaj" />
+        <input type="submit" value="Znajdź" />
     </form>
     </div>
 {% endblock %}

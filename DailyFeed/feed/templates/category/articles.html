@@ -20,13 +20,12 @@
 {% endblock %}
 {% block content %}
     <div class="container">
-    {% if articles|length > 0 %}
-        <h5>Tagi: </h5>
-            <ul class="list-group list-group-horizontal">
+    {% if category.search_tags.all|length > 0 %}
+        <h6>Tagi: </h6>
+            <ul data-toggle="tooltip" title="Tagi po których prowadzone jest wyszukiwanie w danej kategorii, możesz dodać własne tagi poprzez link powyżej" class="list-group list-group-horizontal">
             {% for tag in category.search_tags.all %}
                 <li class="list-group-item">{{ tag.name }}</li>
             {% endfor %}
-            <li class="list-group-item list-group-item-action col-2"><a href="{% url 'category-view' category.id %}?bytags=1">Szukaj po tagach</a></li>
             </ul>
      {% endif %}
     <table class="table">
