@@ -8,17 +8,59 @@
         <thead class="thead-light">
             <tr>
                 <th scope="col">Link</th>
+                <th scope="col">Sugerowane kategorie</th>
+                <th scope="col"> </th>
             </tr>
         </thead>
         <tbody>
              {% for line in discovered_feeds %}
                 <tr>
-                    <td class="col-6"><a href="{{ line }}">{{ line }}</a></td>
+                    <td class="col-4"><a href="{{ line.url }}">{{ line.url }}</a></td>
+                    <td class="col-6">
+                        {% for cat in line.categories %}
+                        <span class="badge badge-pill badge-info">{{ cat }}</span>
+                        {% empty %}
+                            <span class="text-danger">Brak</span>
+                        {% endfor %}
+                    </td>
+                    <td class="col-2">
+                        <a data-toggle="modal" class="add_source" href="#add_discovered_{{ forloop.counter }}">Dodaj do źródeł</a>
+
+                        {% include "source/add_discovered.html" with line=line %}
+                    </td>
                 </tr>
              {% empty %}
-                <tr>Przykro mi, nie znaleziono żadnych feedów :/</tr>
+             <tr>
+                 <p>Przykro mi, nie znaleziono żadnych feedów :/</p>
+                 <p>Możliwe też, że autorzy strony, którą próbujesz sprawdzić nie życzą sobie abyś ją scrapował ;)</p>
+             </tr>
             {% endfor %}
         </tbody>
     </table>
+     <script>
+        $.ajaxSetup({
+            headers: { "X-CSRFToken": "{{csrf_token}}" }
+        });
+         $(
+            function(){
+                $(".discovered_feed_form").submit(
+                    function(event){
+                        console.log("chujnia");
+                        event.preventDefault();
+                        var source_form = $(this);
+                        console.log(source_form);
+                        $.post("{% url 'discovered-source-add' %}",
+                            source_form.serialize(),
+                            function(data){
+                                console.log("chuj");
+                                alert("Dodano nowe źródło");
+                        }
+                        );
+                        $(".discovered_modal").modal('hide');
+                }
+            )
+         }
+         );
+     </script>
     </div>
 {% endblock %}

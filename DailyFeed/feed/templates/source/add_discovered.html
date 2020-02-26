@@ -1,0 +1,16 @@
+    <div class="discovered_modal modal hide" tabindex="-1" role="dialog" id="add_discovered_{{ forloop.counter }}">
+        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form class="discovered_feed_form"  action="javascript:console.log('chuj');" method="post">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">×</button>
+                    <h5>Dodawanie źródła</h5>
+                </div>
+                {% csrf_token %}
+                <input type="hidden" id="link" name="link" value="{{ line.url }}"/>
+                {{ form.as_p }}
+                <input type="submit" value="Dodaj"/>
+            </form>
+        </div>
+        </div>
+    </div>

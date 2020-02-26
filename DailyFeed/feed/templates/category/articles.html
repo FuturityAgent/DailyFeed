@@ -1,5 +1,21 @@
 {% extends "base.html" %}
 {% block title %} {{ category.name}} {% endblock %}
+{% block style %}
+    <style>
+        .disabled_link{
+            color:red;
+        }
+    </style>
+{% endblock %}
+{% block javascript %}
+    <script>
+        $(
+        function(){
+            $("[data-toggle=popover]").popover();
+        }
+    );
+    </script>
+{% endblock %}
 {% block navbar %}
     {{ block.super }}
     <div class="container">
@@ -40,7 +56,13 @@
              {% for line in articles %}
                 <tr>
                     <td class="col-lg-2 col-md-2 col-sm-3 col-xs-3">{{ line.published }}</td>
-                    <td class="col-lg-8 col-md-8 col-sm-6 col-xs-6"><a href="{{ line.url }}">{{ line.title }}</a></td>
+                    <td class="col-lg-8 col-md-8 col-sm-6 col-xs-6">
+                        {% if '---' not in line.url %}
+                            <a target="_blank" href="{{ line.url }}">{{ line.title }}</a>
+                        {% else %}
+                            <a  data-toggle="popover" data-place="top" data-content="Niestety, dla tego newsa nie udało znaleźć się linka, feed RSS dla tej strony prawdopodobnie ich nie zawiera" class="disabled_link text-danger">{{ line.title }}</a>
+                        {% endif %}
+                    </td>
                     <td class="col-lg-2 col-md-2 col-sm-3 col-xs-3">{{ line.website }}</td>
                 </tr>
             {% endfor %}

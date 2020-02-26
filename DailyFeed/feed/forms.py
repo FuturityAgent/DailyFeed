@@ -9,7 +9,17 @@ class SourceForm(forms.ModelForm):
         model = Source
         fields = '__all__'
 
-    # not_rss = forms.BooleanField(required=False)
+
+class DiscoveredSourceForm(forms.Form):
+
+    name = forms.CharField(label="Nazwa")
+    # url = forms.URLField(widget=forms.HiddenInput())
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.all(),
+        widget=forms.RadioSelect,
+        label="Kategoria"
+    )
+
 
 class CategoryForm(forms.ModelForm):
     class Meta:

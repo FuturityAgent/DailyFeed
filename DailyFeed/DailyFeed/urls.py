@@ -23,10 +23,11 @@ from feed import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.IndexView.as_view(), name='index'),
-    path('category/<int:id>', cache_page(60*10)(views.CategoryView.as_view()), name='category-view'),
+    path('category/<int:id>', views.CategoryView.as_view(), name='category-view'),
     path('category/new', views.CategoryCreateView.as_view(), name="new-category"),
     path('category/<int:id>/source', views.CategorySourcesView.as_view(), name='category-sources'),
     path("category/<int:id>/source/new", views.SourceCreateView.as_view(), name="new-source"),
     path("category/<int:id>/tags/new", views.TagCreateView.as_view(), name="new-category-tag"),
-    path("source/check", views.FindSourcesView.as_view() , name="find-source")
+    path("source/check", views.FindSourcesView.as_view() , name="find-source"),
+    path("source/check/add", views.AddDiscoveredSourceView.as_view(), name="discovered-source-add")
 ]

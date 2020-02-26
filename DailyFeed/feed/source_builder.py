@@ -2,18 +2,23 @@ import requests
 import itertools
 import re
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 import pdb
 from .models import Source, Category
 
 
 def get_all_rss(website_link):
-    rss_list = []
     homepage = requests.get(website_link)
     homepage_soup = BeautifulSoup(homepage.text, 'html.parser')
     homepage_rss_feeds = homepage_soup.findAll(type='application/rss+xml')
-    homepage_rss_feeds = homepage_rss_feeds + homepage_soup.findAll('a', {"href": re.compile("^http.*(rss|xml)")})
+    homepage_rss_feeds = homepage_rss_feeds + homepage_soup.findAll('a', {"href": re.compile("(rss|xml)")})
+    parsed_link = urlparse(website_link)
+    for link in homepage_rss_feeds:
+        if not link['href'].startswith("http"):
+            link['href'] = parsed_link.scheme + "://" + parsed_link.netloc + link['href']
 
-    homepage_rss_feeds = set([link['href'] for link in homepage_rss_feeds if "video" not in link['href']])
+    homepage_rss_feeds = set([link['href'] for link in homepage_rss_feeds if ("video" not in link['href'] and "script" not in link['href'])])
+
     return homepage_rss_feeds
 
 
