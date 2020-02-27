@@ -29,5 +29,6 @@ urlpatterns = [
     path("category/<int:id>/source/new", views.SourceCreateView.as_view(), name="new-source"),
     path("category/<int:id>/tags/new", views.TagCreateView.as_view(), name="new-category-tag"),
     path("source/check", views.FindSourcesView.as_view() , name="find-source"),
-    path("source/check/add", views.AddDiscoveredSourceView.as_view(), name="discovered-source-add")
+    path("source/check/add", views.AddDiscoveredSourceView.as_view(), name="discovered-source-add"),
+    path("source/<int:pk>/delete", views.DeleteSourceView.as_view(), name="delete-source")
 ]

@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.views import View
-from django.views.generic.edit import CreateView
+from django.views.generic.edit import CreateView, DeleteView
 from django.core.cache import cache
+from django.urls import reverse_lazy
 from django.http import JsonResponse
 from .models import Category, Source, SearchTag
 from .forms import SourceForm, FindSourceForm, DiscoveredSourceForm
@@ -53,19 +54,25 @@ class CategoryView(View):
 
             if isinstance(site_category_articles, str):
                 site_category_articles = json.loads(site_category_articles)
+            try_cache_formatted = cache.get("formatted_{}".format(site.link))
 
+            site_category_articles = try_cache_formatted or self.format_entries(site_category_articles)
+            if not try_cache_formatted:
+                cache.set("formatted_{}".format(site.link), json.dumps(site_category_articles), 10 * 60)
+            if isinstance(site_category_articles, str):
+                site_category_articles = json.loads(site_category_articles)
             best_articles_grouped.append(site_category_articles)
 
         print("MINELO: ", round(time.time() - start, 3))
         best_articles = list(itertools.chain(*best_articles_grouped))
         # random.shuffle(best_articles)
         best_articles = self.delete_duplicate_articles(best_articles)
-        for e in best_articles:
-            e['published'] = time.struct_time(tuple(e['published'])) if isinstance(e['published'], list) else e['published']
+        # for e in best_articles:
+        #     e['published'] = time.struct_time(tuple(e['published'])) if isinstance(e['published'], list) else e['published']
         best_articles = sorted(best_articles, key=lambda l: l['published'], reverse=True)
         no_of_articles = len(best_articles) - 1
         best_articles = best_articles[:50] or best_articles[:no_of_articles] or []
-        best_articles = self.format_entries(best_articles)
+        # best_articles = self.format_entries(best_articles)
 
         print("ZAKONCZONO: ", round(time.time() - start, 3))
         return best_articles
@@ -79,10 +86,11 @@ class CategoryView(View):
         if len(entries) > 30:
             entries = self.find_matching_entries(parsed_feed)
         last_entries = entries[:10] or entries[:abs(len(entries) - 1)]
+        # pdb.set_trace()
         last_entries = [{'url': getattr(e, 'link', '----'),
                          'title': getattr(e, 'title', '----'),
                          'summary': re.sub(html_cleaner_regex, ' ', getattr(e, 'summary', '-----')),
-                         'published': getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().strftime("%Y-%m-%d")),
+                         'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().strftime("%Y-%m-%d"))),
                          'website': urlparse(getattr(parsed_feed, 'link', getattr(e, 'link',  getattr(parsed_feed, 'href', "unknown")))).netloc
                          } for e in last_entries]
 
@@ -111,8 +119,8 @@ class CategoryView(View):
         urls_to_reparse = ['feedproxy', 'rss']
         for e in entries:
             # pdb.set_trace()
-            # date_published =
-            e['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', e['published'])[:10]
+            date_published = time.struct_time(tuple(e['published'])) if isinstance(e['published'], list) else e['published']
+            e['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)[:10]
             if any([e['website'].startswith(url) for url in urls_to_reparse]):
                 article = requests.get(e['url'])
                 e['website'] = urlparse(article.url).netloc
@@ -266,5 +274,17 @@ class AddDiscoveredSourceView(View):
 
         return JsonResponse({'success': 1})
 
+
+class DeleteSourceView(DeleteView):
+    model = Source
+    success_url = reverse_lazy("index")
+
+    def get(self, request, *args, **kwargs):
+        return self.post(request, *args, **kwargs)
+
+
+    def get_success_url(self):
+        category_url = self.request.META['HTTP_REFERER']
+        return category_url
 
 # Create your views here.
