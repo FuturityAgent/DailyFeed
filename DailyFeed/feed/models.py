@@ -1,6 +1,6 @@
 from django.db import models
 from django.urls import reverse
-
+from taggit.managers import TaggableManager
 
 class SearchTag(models.Model):
     name = models.CharField(max_length=100)

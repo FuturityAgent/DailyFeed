@@ -1,51 +1,61 @@
 from django.shortcuts import render
 from django.views import View
+from django.views.generic import TemplateView
 from django.views.generic.edit import CreateView, DeleteView
 from django.core.cache import cache
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from .models import Category, Source, SearchTag
 from .forms import SourceForm, FindSourceForm, DiscoveredSourceForm
-from .source_builder import get_all_rss, build_category_sources, check_if_source_exists
+from .source_builder import check_if_source_exists
 import requests
 import re
 import itertools
 import feedparser
+import os
+from bs4 import BeautifulSoup
 import time
 import datetime
 import json
 from urllib.parse import urlparse
-from dateutil.parser import parse
-from bs4 import BeautifulSoup
 import pdb
 
 html_cleaner_regex = re.compile('<.*?>')
 
 
-class IndexView(View):
+class GeneralView(TemplateView):
+
+    def get_context_data(self, **kwargs):
+        context = super(GeneralView, self).get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        return context
+
+
+class IndexView(GeneralView):
     http_method_names = ['get']
+    template_name = "index.html"
 
-    def get(self, request, *args, **kwargs):
-        categories = Category.objects.all()
-        return render(request, "index.html", {'categories': categories})
+    # def get(self, request, *args, **kwargs):
+    #     return render(request, "index.html")
 
-class CategoryView(View):
+
+class CategoryView(GeneralView):
     http_method_names = ['get']
+    template_name = "category/articles.html"
 
-    def get(self, request, id):
-        category = Category.objects.get(id=id)
-        categories = Category.objects.all()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category = Category.objects.get(id=kwargs['id'])
         all_articles = self.get_articles(category.id)
-        return render(request, "category/articles.html", {"articles": all_articles,
-                                                          'categories': categories,
-                                                          'category': category})
+        context['category'] = category
+        context['articles'] = all_articles
+        return context
 
     def get_articles(self, category_id):
         category = Category.objects.get(id=category_id)
         best_articles_grouped = []
         sources = category.sources.all()
         start = time.time()
-        # pdb.set_trace()
         for site in sources:
             try_cache = cache.get("cache_{}".format(site.link))
             site_category_articles = try_cache or self.scrape_xml_feed(site.link)
@@ -65,14 +75,11 @@ class CategoryView(View):
 
         print("MINELO: ", round(time.time() - start, 3))
         best_articles = list(itertools.chain(*best_articles_grouped))
-        # random.shuffle(best_articles)
         best_articles = self.delete_duplicate_articles(best_articles)
-        # for e in best_articles:
-        #     e['published'] = time.struct_time(tuple(e['published'])) if isinstance(e['published'], list) else e['published']
         best_articles = sorted(best_articles, key=lambda l: l['published'], reverse=True)
         no_of_articles = len(best_articles) - 1
         best_articles = best_articles[:50] or best_articles[:no_of_articles] or []
-        # best_articles = self.format_entries(best_articles)
+        best_articles = self.make_date_clear(best_articles)
 
         print("ZAKONCZONO: ", round(time.time() - start, 3))
         return best_articles
@@ -83,20 +90,16 @@ class CategoryView(View):
         parsed_feed = feedparser.parse(source_link)
         entries = parsed_feed.entries
 
-        if len(entries) > 30:
+        if len(entries) > 20:
             entries = self.find_matching_entries(parsed_feed)
         last_entries = entries[:10] or entries[:abs(len(entries) - 1)]
-        # pdb.set_trace()
         last_entries = [{'url': getattr(e, 'link', '----'),
                          'title': getattr(e, 'title', '----'),
                          'summary': re.sub(html_cleaner_regex, ' ', getattr(e, 'summary', '-----')),
-                         'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().strftime("%Y-%m-%d"))),
+                         'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().timetuple())),
                          'website': urlparse(getattr(parsed_feed, 'link', getattr(e, 'link',  getattr(parsed_feed, 'href', "unknown")))).netloc
                          } for e in last_entries]
-
-        last_entries = [e for e in last_entries if (current_year - e['published'].tm_year <= 1)]
-        # last_entries = {frozenset(line.items()): line for line in last_entries}.values()
-
+        last_entries = [e for e in last_entries if (current_year - int(e['published'].tm_year) <= 1)]
         return last_entries
 
     def find_matching_entries(self, feed):
@@ -105,31 +108,31 @@ class CategoryView(View):
         category = Category.objects.get(id=category_id)
 
         matching_entries = []
-        # pdb.set_trace()
-        # bytags = self.request.GET.get('bytags', False)
-
         for e in all_entries:
-            # link = e.link.lower() if not bytags else ''
             if any([t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
                 matching_entries.append(e)
 
         return matching_entries
 
+
     def format_entries(self, entries):
         urls_to_reparse = ['feedproxy', 'rss']
         for e in entries:
-            # pdb.set_trace()
             date_published = time.struct_time(tuple(e['published'])) if isinstance(e['published'], list) else e['published']
-            e['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)[:10]
+            e['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)
             if any([e['website'].startswith(url) for url in urls_to_reparse]):
                 article = requests.get(e['url'])
                 e['website'] = urlparse(article.url).netloc
         return entries
 
+    def make_date_clear(self, entries):
+        for e in entries:
+            e['published'] = e['published'][:10]
+        return entries
+
     def delete_duplicate_articles(self, articles):
         unique_articles = []
         unique_paths = set()
-        # pdb.set_trace()
         for line in articles:
             url_path = urlparse(line['url']).path
             if url_path in unique_paths:
@@ -139,18 +142,29 @@ class CategoryView(View):
         return unique_articles
 
 
-class CategorySourcesView(View):
+class CategorySourcesView(GeneralView):
     http_method_names = ['get']
+    template_name = "category/sources.html"
 
-    def get(self, request, id):
-        category = Category.objects.get(id=id)
-        categories = Category.objects.all()
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category = Category.objects.get(id=kwargs['id'])
         sources = category.sources.all()
-        return render(request, "category/sources.html", {'sources': sources,
-                                                          'categories': categories,
-                                                          'category': category})
+        context['category'] = category
+        context['sources'] = sources
+        return context
 
-class SourceCreateView(CreateView):
+
+class GeneralCreateView(CreateView):
+    """General class for create view"""
+
+    def get_context_data(self, **kwargs):
+        context = super(GeneralCreateView, self).get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        return context
+
+
+class SourceCreateView(GeneralCreateView):
     model = Source
     template_name = "category/source_form.html"
     success_url = "/"
@@ -170,52 +184,71 @@ class SourceCreateView(CreateView):
             form.add_error('link', "Dodawałeś już ten feed dla kategorii {}".format(category.name))
             return self.form_invalid(form)
         category.sources.add(form.instance)
-        cache.clear()
         return response
 
 
-
-
-class CategoryCreateView(CreateView):
+class CategoryCreateView(GeneralCreateView):
     model = Category
     template_name = 'category/category_form.html'
     fields = ['name']
     success_url = '/'
 
 
-class TagCreateView(CreateView):
+class TagCreateView(GeneralCreateView):
     model = SearchTag
     template_name = 'tags/searchtag_form.html'
     fields = ['name']
-    success_url = '/'
+
+    def get_success_url(self):
+        # pdb.set_trace()
+        category_id = self.kwargs.get('id', None)
+        return reverse_lazy("category-view", kwargs={'id': category_id})
 
     def form_valid(self, form):
         response = super(TagCreateView, self).form_valid(form)
         category_id = self.kwargs.get('id', None)
         category = Category.objects.get(id=category_id)
-        pdb.set_trace()
         cache.clear()
         category.search_tags.add(form.instance)
         return response
 
 
-class FindSourcesView(View):
+class FindSourcesView(GeneralView):
     http_method_names = ['get', 'post']
+    template_name = "source/find.html"
 
-    def get(self, request):
-        form = FindSourceForm()
-        return render(request, "source/find.html", {"form":form})
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        context['form'] = FindSourceForm()
+        return context
 
     def post(self, request):
         form = FindSourceForm(request.POST)
         discovered_feeds = []
         if form.is_valid():
             link = form.cleaned_data['link']
-            discovered_feeds = get_all_rss(link)
+            discovered_feeds = self.get_all_rss(link)
             discovered_feeds = self.get_suggested_categories(discovered_feeds)
-        # pdb.set_trace()
         form = DiscoveredSourceForm()
         return render(request, "source/discovered.html",{"discovered_feeds": discovered_feeds, 'form': form})
+
+    def get_all_rss(self, website_link):
+        homepage = requests.get(website_link)
+        homepage_soup = BeautifulSoup(homepage.text, 'html.parser')
+        homepage_rss_feeds = homepage_soup.findAll(type='application/rss+xml')
+        homepage_rss_feeds = homepage_rss_feeds + homepage_soup.findAll('a',
+                                                                        {"href": re.compile("/(?!.*/).*(rss|xml)")})
+
+        parsed_link = urlparse(website_link)
+        for link in homepage_rss_feeds:
+            if not link['href'].startswith("http"):
+                link['href'] = parsed_link.scheme + "://" + parsed_link.netloc + link['href']
+
+        homepage_rss_feeds = set([link['href'] for link in homepage_rss_feeds if (
+                    "?" not in link['href'] and "video" not in link['href'] and "script" not in link['href'])])
+
+        return homepage_rss_feeds
 
     def get_suggested_categories(self, discovered_feeds):
         """method checks keywords in each feed url, and attach  names of categories which
@@ -254,37 +287,51 @@ class FindSourcesView(View):
 
 
 class AddDiscoveredSourceView(View):
+
     def get(self, request):
         form = DiscoveredSourceForm()
-        return render(request, "source/add_discovered.html", {'form': form})
+        categories = Category.objects.all()
+        return render(request, "source/add_discovered.html", {'form': form, 'categories': categories})
 
     def post(self, request):
         form = DiscoveredSourceForm(data=request.POST)
 
         if form.is_valid():
-            # pdb.set_trace()
             source_name = form.cleaned_data.get('name')
             source_url = form.data.get('link')
-            category_id = form.cleaned_data.get('category')
             category_obj = form.cleaned_data.get('category')
             new_source = Source(name=source_name, link=source_url)
             new_source.save()
-            cache.clear()
             category_obj.sources.add(new_source)
 
-        return JsonResponse({'success': 1})
+        return JsonResponse({})
 
 
-class DeleteSourceView(DeleteView):
-    model = Source
-    success_url = reverse_lazy("index")
+class DefaultDeleteView(DeleteView):
 
     def get(self, request, *args, **kwargs):
         return self.post(request, *args, **kwargs)
-
 
     def get_success_url(self):
         category_url = self.request.META['HTTP_REFERER']
         return category_url
 
-# Create your views here.
+
+class DeleteSourceView(DefaultDeleteView):
+    model = Source
+    success_url = reverse_lazy("index")
+
+    def get(self, request, *args, **kwargs):
+        site = Source.objects.get(id=kwargs['pk'])
+        try_cache = cache.get("cache_{}".format(site.link))
+        try_cache_formatted = cache.get("formatted_{}".format(site.link))
+        if try_cache:
+            cache.delete("cache_{}".format(site.link))
+        if try_cache_formatted:
+            cache.delete("formatted_{}".format(site.link))
+        return self.post(request, *args, **kwargs)
+
+
+class DeleteTagView(DefaultDeleteView):
+    model = SearchTag
+    success_url = reverse_lazy("category-view")

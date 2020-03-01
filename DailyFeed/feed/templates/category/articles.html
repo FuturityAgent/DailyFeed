@@ -6,6 +6,7 @@
             color:red;
         }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 {% endblock %}
 {% block javascript %}
     <script>
@@ -40,7 +41,10 @@
         <h6>Tagi: </h6>
             <ul data-toggle="tooltip" title="Tagi po których prowadzone jest wyszukiwanie w danej kategorii, możesz dodać własne tagi poprzez link powyżej" class="list-group list-group-horizontal">
             {% for tag in category.search_tags.all %}
-                <li class="list-group-item">{{ tag.name }}</li>
+                <li class="badge badge-pill badge-info"> <span>{{ tag.name }} </span> <span><a
+                        onclick="confirm('Czy na pewno chcesz usunąć tag: {{ tag.name }}?')"
+                        href="/category/{{ category.id }}/tags/{{ tag.id }}/delete">
+                    <i data-toggle="tooltip" title="Usuń ten tag" class="fa fa-remove"> </i></a></span> </li>
             {% endfor %}
             </ul>
      {% endif %}
