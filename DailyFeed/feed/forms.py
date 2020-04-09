@@ -13,7 +13,6 @@ class SourceForm(forms.ModelForm):
 class DiscoveredSourceForm(forms.Form):
 
     name = forms.CharField(label="Nazwa")
-    # url = forms.URLField(widget=forms.HiddenInput())
     category = forms.ModelChoiceField(
         queryset=Category.objects.all(),
         widget=forms.RadioSelect,
@@ -32,6 +31,8 @@ class SearchTagForm(forms.ModelForm):
         model = SearchTag
         fields = ['name']
 
+
+TagFormset = forms.formset_factory(SearchTagForm, extra=3)
 
 class FindSourceForm(forms.Form):
     link = forms.URLField(help_text="Adres strony")

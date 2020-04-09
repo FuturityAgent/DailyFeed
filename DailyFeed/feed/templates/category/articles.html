@@ -5,6 +5,19 @@
         .disabled_link{
             color:red;
         }
+        .list-group-item{
+            font-size: 15px;
+        }
+        .list-group{
+            padding-bottom:10px;
+            font-size:25px;
+        }
+        .list-group-horizontal{
+            display:block;
+        }
+        .dropdown-menu{
+            width: 200px !important;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 {% endblock %}
@@ -17,36 +30,41 @@
     );
     </script>
 {% endblock %}
-{% block navbar %}
-    {{ block.super }}
-    <div class="container">
-         <ul class="list-group list-group-horizontal">
-         <li class="list-group-item">
-             <b>
-                  <a class="col-lg-3 col-md-3 col-sm-6 col-xs-6" href="/category/{{ category.id }}/source">Źródła</a>
-             </b>
-         </li>
-        <li class="list-group-item"><b>
-            <a class="col-lg-3 col-md-3 col-sm-6 col-xs-6" href="/category/{{ category.id }}/source/new">Nowe źródło?</a>
-        </b></li>
-        <li class="list-group-item"><b>
-            <a class="col-lg-3 col-md-3 col-sm-6 col-xs-6" href="/category/{{ category.id }}/tags/new">Dodaj tagi</a></b>
-        </li>
-    </ul>
-    </div>
-{% endblock %}
 {% block content %}
     <div class="container">
-    {% if category.search_tags.all|length > 0 %}
-        <h6>Tagi: </h6>
-            <ul data-toggle="tooltip" title="Tagi po których prowadzone jest wyszukiwanie w danej kategorii, możesz dodać własne tagi poprzez link powyżej" class="list-group list-group-horizontal">
-            {% for tag in category.search_tags.all %}
-                <li class="badge badge-pill badge-info"> <span>{{ tag.name }} </span> <span><a
+        <h1 class="text-primary">{{ category.name }}</h1>
+        <div class="btn-group dropdown">
+            <a class="btn btn-light dropdown-toggle" data-toggle="dropdown" href="#">
+                Więcej<span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu" role="menu">
+                    <li class="list-group-item btn btn-light"><b>
+                        <a class="col-lg-6 col-md-6 col-sm-6 col-xs-6 text-dark" href="/category/{{ category.id }}/tags/new">Dodaj tagi</a></b>
+                    </li>
+                     <li class="list-group-item btn btn-light">
+                    <b>
+                        <a class="col-lg-6 col-md-6 col-sm-6 col-xs-6 text-dark" href="/category/{{ category.id }}/source">Źródła</a>
+                    </b>
+                    </li>
+                    <li class="list-group-item btn btn-light"><b>
+                        <a class="col-lg-6 col-md-6 col-sm-6 col-xs-6 text-dark" href="/category/{{ category.id }}/source/new">Nowe źródło?</a>
+                    </b></li>
+            </ul>
+        </div>
+        {% if category.search_tags.all|length > 0 %}
+        <div class="col-12">
+            <h6>Tagi: </h6>
+                <ul data-toggle="tooltip"
+                    title="Tagi po których prowadzone jest wyszukiwanie w danej kategorii, możesz dodać własne tagi poprzez link powyżej"
+                    class="list-group list-group-horizontal">
+                {% for tag in category.search_tags.all %}
+                    <li class="badge badge-pill badge-info"> <span>{{ tag.name }} </span> <span><a
                         onclick="confirm('Czy na pewno chcesz usunąć tag: {{ tag.name }}?')"
                         href="/category/{{ category.id }}/tags/{{ tag.id }}/delete">
                     <i data-toggle="tooltip" title="Usuń ten tag" class="fa fa-remove"> </i></a></span> </li>
-            {% endfor %}
-            </ul>
+                {% endfor %}
+                </ul>
+        </div>
      {% endif %}
     <table class="table">
         <thead class="thead-light">
@@ -72,5 +90,5 @@
             {% endfor %}
         </tbody>
     </table>
-    </div>
+    </h1>
 {% endblock %}
