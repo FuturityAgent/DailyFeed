@@ -87,6 +87,15 @@
                     </td>
                     <td class="col-lg-2 col-md-2 col-sm-3 col-xs-3">{{ line.website }}</td>
                 </tr>
+             {% empty %}
+                <tr>
+                <h3 class="text-info">Nie można było znaleźć newsów odpowiadających danej kategorii</h3>
+                <h4 class="text-info">
+                    <a href="/category/{{ category.id }}/source/new">
+                        Możesz to zmienić dodając więcej źródeł
+                    </a>
+                </h4>
+                </tr>
             {% endfor %}
         </tbody>
     </table>
