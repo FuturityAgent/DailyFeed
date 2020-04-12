@@ -36,10 +36,6 @@ class IndexView(GeneralView):
     http_method_names = ['get']
     template_name = "index.html"
 
-    # def get(self, request, *args, **kwargs):
-    #     return render(request, "index.html")
-
-
 class CategoryView(GeneralView):
     http_method_names = ['get']
     template_name = "category/articles.html"
@@ -90,9 +86,7 @@ class CategoryView(GeneralView):
         current_year = datetime.datetime.today().year
         parsed_feed = feedparser.parse(source_link)
         entries = parsed_feed.entries
-
-        # if len(entries) > 20:
-        entries = self.find_matching_entries(entries) if len(entries) > 20 else entries
+        entries = self.find_matching_entries(entries) if len(entries) > 30 else entries
         last_entries = entries[:10] or entries[:abs(len(entries) - 1)]
         last_entries = [{'url': getattr(e, 'link', '----'),
                          'title': getattr(e, 'title', '----'),
@@ -217,6 +211,7 @@ class TagCreateView(GeneralCreateView):
         category_id = self.kwargs.get('id', None)
         category = Category.objects.get(id=category_id)
         if formset.is_valid():
+            cache.clear()
             for instance in formset.forms:
                 new_tag = instance.cleaned_data.get('name', None)
                 if new_tag:

@@ -32,7 +32,7 @@ class SearchTagForm(forms.ModelForm):
         fields = ['name']
 
 
-TagFormset = forms.formset_factory(SearchTagForm, extra=3)
+TagFormset = forms.formset_factory(SearchTagForm, extra=1)
 
 class FindSourceForm(forms.Form):
     link = forms.URLField(help_text="Adres strony")

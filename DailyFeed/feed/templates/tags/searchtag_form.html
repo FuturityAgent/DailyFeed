@@ -1,12 +1,52 @@
 {% extends "base.html" %}
 {% block title %}Dodaj tagi{% endblock %}
+{% block javascript %}
+    <script>
+    let cloneFormRow = (selector, prefix) => {
+        let newRow = $(selector).clone(true);
+        let total = $('#id_' + prefix + '-TOTAL_FORMS').val();
+        newRow.find('input:not([type=button]):not([type=submit]):not([type=reset])').each(function() {
+        var name = $(this).attr('name').replace('-' + (total-1) + '-', '-' + total + '-');
+        var id = 'id_' + name;
+        $(this).attr({'name': name, 'id': id}).val('');
+    });
+    newRow.find('label').each(function() {
+        var forValue = $(this).attr('for');
+        if (forValue) {
+          forValue = forValue.replace('-' + (total-1) + '-', '-' + total + '-');
+          $(this).attr({'for': forValue});
+        }
+    });
+    total++;
+    console.log(total);
+    $('#id_' + prefix + '-TOTAL_FORMS').val(total);
+    $(selector).after(newRow);
+    return false;
+    };
+
+    $(document).on('click','.add-form-row', function(e){
+        e.preventDefault();
+        cloneFormRow('.form-row:last', 'form');
+        return false;
+
+    });
+    </script>
+{% endblock %}
 {% block content %}
     <form action="" method="post">
         {{ formset.management_form }}
         {% csrf_token %}
         {% for form in formset %}
-            {{ form.as_p }}
+            <div class="row form-row">
+                {{ form.as_p }}
+            </div>
         {% endfor %}
+<!--        <div class="input-group spacer">-->
+<!--            <div class="input-group-append">-->
+        <div>
+            <a class="btn btn-primary add-form-row">+</a>
+        </div>
+<!--        </div>-->
     <input type="submit" class="btn btn-primary" value="Dodaj tagi" />
 </form>
 {% endblock %}
