@@ -4,8 +4,7 @@ from django.views.generic import TemplateView
 from django.views.generic.edit import CreateView, DeleteView
 from django.core.cache import cache
 from django.urls import reverse_lazy
-from django.http import JsonResponse, HttpResponse
-from django.forms import formset_factory
+from django.http import JsonResponse
 from .models import Category, Source, SearchTag
 from .forms import SourceForm, FindSourceForm, DiscoveredSourceForm, SearchTagForm, TagFormset
 from .source_builder import check_if_source_exists
@@ -45,6 +44,7 @@ class CategoryView(GeneralView):
         category = Category.objects.get(id=kwargs['id'])
         all_articles = self.get_articles(category.id)
         context['category'] = category
+        context['no_of_sources'] = category.sources.count()
         context['articles'] = all_articles
         return context
 
@@ -57,7 +57,7 @@ class CategoryView(GeneralView):
             try_cache = cache.get("cache_{}".format(site.link))
             site_category_articles = try_cache or self.scrape_xml_feed(site.link)
             if not try_cache:
-                cache.set("cache_{}".format(site.link), json.dumps(site_category_articles), 10*60)
+                cache.set("cache_{}".format(site.link), json.dumps(site_category_articles), 5*60)
 
             if isinstance(site_category_articles, str):
                 site_category_articles = json.loads(site_category_articles)
@@ -164,6 +164,11 @@ class SourceCreateView(GeneralCreateView):
     template_name = "category/source_form.html"
     success_url = "/"
     form_class = SourceForm
+
+    def get_context_data(self, **kwargs):
+        context = super(SourceCreateView, self).get_context_data(**kwargs)
+        context['id'] = self.kwargs.get('id', None)
+        return context
 
     def form_valid(self, form):
         response = super(SourceCreateView, self).form_valid(form)

@@ -1,7 +1,5 @@
 from django import forms
 from .models import Source, Category, SearchTag
-import feedparser
-import pdb
 
 
 class SourceForm(forms.ModelForm):

@@ -18,6 +18,9 @@
         .dropdown-menu{
             width: 200px !important;
         }
+        .source_counter{
+            display:block;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 {% endblock %}
@@ -50,7 +53,10 @@
                         <a class="col-lg-6 col-md-6 col-sm-6 col-xs-6 text-dark" href="/category/{{ category.id }}/source/new">Nowe źródło?</a>
                     </b></li>
             </ul>
-        </div>
+            </div>
+            <div>
+                    <h5 class="text-info source_counter">Masz {{ no_of_sources }} źródeł</h5>
+                </div>
         {% if category.search_tags.all|length > 0 %}
         <div class="col-12">
             <h6>Tagi: </h6>
@@ -89,12 +95,14 @@
                 </tr>
              {% empty %}
                 <tr>
-                <h3 class="text-info">Nie można było znaleźć newsów odpowiadających danej kategorii</h3>
-                <h4 class="text-info">
+                    <td style="text-align:center">
+                        <h3 class="text-info">Nie można było znaleźć newsów odpowiadających danej kategorii</h3>
+                        <h4 class="text-info">
                     <a href="/category/{{ category.id }}/source/new">
                         Możesz to zmienić dodając więcej źródeł
                     </a>
                 </h4>
+                    </td>
                 </tr>
             {% endfor %}
         </tbody>

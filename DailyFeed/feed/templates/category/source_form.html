@@ -6,6 +6,7 @@
         {% csrf_token %}
         {{ form.as_p }}
         <input type="submit" class="btn btn-primary"class="btn btn-primary" value="Dodaj" />
-    </form>
+        <a class="btn col-lg-2 col-md-2 col-sm-6 col-xs-6 btn btn-primary" href="/category/{{ id }}">Anuluj</a></b>
+        </form>
     </div>
 {% endblock %}
