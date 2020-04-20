@@ -12,13 +12,12 @@ import requests
 import re
 import itertools
 import feedparser
-import os
 from bs4 import BeautifulSoup
 import time
 import datetime
 import json
 from urllib.parse import urlparse
-import pdb
+import random
 
 html_cleaner_regex = re.compile('<.*?>')
 
@@ -86,9 +85,10 @@ class CategoryView(GeneralView):
         current_year = datetime.datetime.today().year
         parsed_feed = feedparser.parse(source_link)
         entries = parsed_feed.entries
-        entries = self.find_matching_entries(entries) if len(entries) > 30 else entries
-        last_entries = entries[:10] or entries[:abs(len(entries) - 1)]
-        last_entries = [{'url': getattr(e, 'link', '----'),
+        entries = self.find_matching_entries(entries)
+        last_entries = entries[:20] or entries[:abs(len(entries) - 1)]
+        last_entries = [
+                        {'url': getattr(e, 'link', '----'),
                          'title': getattr(e, 'title', '----'),
                          'summary': re.sub(html_cleaner_regex, ' ', getattr(e, 'summary', '-----')),
                          'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().timetuple())),
@@ -105,6 +105,11 @@ class CategoryView(GeneralView):
         for e in entries:
             if any([t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
                 matching_entries.append(e)
+            else:
+                chance = random.random()
+                if chance > 0.8:
+                    matching_entries.append(e)
+
 
         return matching_entries
 
