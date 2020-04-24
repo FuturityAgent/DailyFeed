@@ -100,16 +100,16 @@ class CategoryView(GeneralView):
     def find_matching_entries(self, entries):
         category_id = self.kwargs.get('id', None)
         category = Category.objects.get(id=category_id)
-
+        add_treshold = 0.8
         matching_entries = []
         for e in entries:
             if any([t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
                 matching_entries.append(e)
             else:
                 chance = random.random()
-                if chance > 0.8:
+                if chance > add_treshold:
                     matching_entries.append(e)
-
+            add_treshold -= 0.01
 
         return matching_entries
 
