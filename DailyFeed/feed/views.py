@@ -101,6 +101,7 @@ class CategoryView(GeneralView):
         category_id = self.kwargs.get('id', None)
         category = Category.objects.get(id=category_id)
         add_treshold = 0.8
+        treshold_decrease = 1.0/len(entries)
         matching_entries = []
         for e in entries:
             if any([t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
@@ -109,7 +110,7 @@ class CategoryView(GeneralView):
                 chance = random.random()
                 if chance > add_treshold:
                     matching_entries.append(e)
-            add_treshold -= 0.01
+            add_treshold -= treshold_decrease
 
         return matching_entries
 
