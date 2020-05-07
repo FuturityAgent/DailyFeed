@@ -1,3 +1,14 @@
+import datetime
+from urllib.parse import urlparse
+import json
+import itertools
+import re
+import time
+import random
+import feedparser
+from bs4 import BeautifulSoup
+import requests
+
 from django.shortcuts import render, redirect
 from django.views import View
 from django.views.generic import TemplateView
@@ -6,18 +17,8 @@ from django.core.cache import cache
 from django.urls import reverse_lazy
 from django.http import JsonResponse
 from .models import Category, Source, SearchTag
-from .forms import SourceForm, FindSourceForm, DiscoveredSourceForm, SearchTagForm, TagFormset
+from .forms import SourceForm, FindSourceForm, DiscoveredSourceForm, TagFormset
 from .source_builder import check_if_source_exists
-import requests
-import re
-import itertools
-import feedparser
-from bs4 import BeautifulSoup
-import time
-import datetime
-import json
-from urllib.parse import urlparse
-import random
 
 html_cleaner_regex = re.compile('<.*?>')
 
@@ -94,22 +95,22 @@ class CategoryView(GeneralView):
                          'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().timetuple())),
                          'website': urlparse(getattr(parsed_feed, 'link', getattr(e, 'link',  getattr(parsed_feed, 'href', "unknown")))).netloc
                          } for e in last_entries]
-        last_entries = [e for e in last_entries if (current_year - int(e['published'].tm_year) <= 1)]
+        last_entries = [e for e in last_entries if current_year - int(e['published'].tm_year <= 1)]
         return last_entries
 
     def find_matching_entries(self, entries):
         category_id = self.kwargs.get('id', None)
         category = Category.objects.get(id=category_id)
         add_treshold = 0.8
-        treshold_decrease = 1.0/len(entries)
+        treshold_decrease = 1.0/(len(entries) + 1)
         matching_entries = []
-        for e in entries:
-            if any([t.name.lower() in e.summary.lower() for t in category.search_tags.all()]):
-                matching_entries.append(e)
+        for entry in entries:
+            if any([t.name.lower() in entry.summary.lower() for t in category.search_tags.all()]):
+                matching_entries.append(entry)
             else:
                 chance = random.random()
                 if chance > add_treshold:
-                    matching_entries.append(e)
+                    matching_entries.append(entry)
             add_treshold -= treshold_decrease
 
         return matching_entries
@@ -117,17 +118,17 @@ class CategoryView(GeneralView):
 
     def format_entries(self, entries):
         urls_to_reparse = ['feedproxy', 'rss']
-        for e in entries:
-            date_published = time.struct_time(tuple(e['published'])) if isinstance(e['published'], list) else e['published']
-            e['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)
-            if any([e['website'].startswith(url) for url in urls_to_reparse]):
-                article = requests.get(e['url'])
-                e['website'] = urlparse(article.url).netloc
+        for entry in entries:
+            date_published = time.struct_time(tuple(entry['published'])) if isinstance(entry['published'], list) else entry['published']
+            entry['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)
+            if any([entry['website'].startswith(url) for url in urls_to_reparse]):
+                article = requests.get(entry['url'])
+                entry['website'] = urlparse(article.url).netloc
         return entries
 
     def make_date_clear(self, entries):
-        for e in entries:
-            e['published'] = "{} {}".format(e['published'][:10], e['published'][11:16])
+        for entry in entries:
+            entry['published'] = "{} {}".format(entry['published'][:10], entry['published'][11:16])
         return entries
 
 
@@ -252,14 +253,17 @@ class FindSourcesView(GeneralView):
             discovered_feeds = self.get_suggested_categories(discovered_feeds)
         form = DiscoveredSourceForm()
         categories = Category.objects.all()
-        return render(request, "source/discovered.html", {'categories': categories,"discovered_feeds": discovered_feeds, 'form': form})
+        return render(request, "source/discovered.html", {'categories': categories, "discovered_feeds": discovered_feeds, 'form': form})
 
     def get_all_rss(self, website_link: str):
         homepage = requests.get(website_link)
         homepage_soup = BeautifulSoup(homepage.text, 'html.parser')
         homepage_rss_feeds = homepage_soup.findAll(type='application/rss+xml')
         homepage_rss_feeds = homepage_rss_feeds + homepage_soup.findAll('a',
-                                                                        {"href": re.compile("/(?!.*/).*(rss|xml)")})
+                                                                        {
+                                                                            "href": re.compile("/(?!.*/).*(rss|xml)")
+                                                                        }
+                                                                        )
 
         parsed_link = urlparse(website_link)
         for link in homepage_rss_feeds:
@@ -267,7 +271,7 @@ class FindSourcesView(GeneralView):
                 link['href'] = parsed_link.scheme + "://" + parsed_link.netloc + link['href']
 
         homepage_rss_feeds = set([link['href'] for link in homepage_rss_feeds if (
-                    "?" not in link['href'] and "video" not in link['href'] and "script" not in link['href'])])
+            "?" not in link['href'] and "video" not in link['href'] and "script" not in link['href'])])
 
         return homepage_rss_feeds
 
