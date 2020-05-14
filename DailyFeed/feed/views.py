@@ -8,6 +8,7 @@ import random
 import feedparser
 from bs4 import BeautifulSoup
 import requests
+from nltk.stem import PorterStemmer
 
 from django.shortcuts import render, redirect
 from django.views import View
@@ -22,6 +23,7 @@ from .source_builder import check_if_source_exists
 
 html_cleaner_regex = re.compile('<.*?>')
 
+porter = PorterStemmer()
 
 class GeneralView(TemplateView):
 
@@ -75,7 +77,7 @@ class CategoryView(GeneralView):
         best_articles = self.delete_duplicate_articles(best_articles)
         best_articles = sorted(best_articles, key=lambda l: l['published'], reverse=True)
         no_of_articles = len(best_articles) - 1
-        best_articles = best_articles[:50] or best_articles[:no_of_articles] or []
+        best_articles = best_articles[:100] or best_articles[:no_of_articles] or []
         best_articles = self.make_date_clear(best_articles)
 
         print("ZAKONCZONO: ", round(time.time() - start, 3))
@@ -87,7 +89,7 @@ class CategoryView(GeneralView):
         parsed_feed = feedparser.parse(source_link)
         entries = parsed_feed.entries
         entries = self.find_matching_entries(entries)
-        last_entries = entries[:20] or entries[:abs(len(entries) - 1)]
+        last_entries = entries[:50] or entries[:abs(len(entries) - 1)]
         last_entries = [
                         {'url': getattr(e, 'link', '----'),
                          'title': getattr(e, 'title', '----'),
@@ -102,17 +104,18 @@ class CategoryView(GeneralView):
         category_id = self.kwargs.get('id', None)
         category = Category.objects.get(id=category_id)
         add_treshold = 0.8
+        category_tags = category.search_tags.all()
         treshold_decrease = 1.0/(len(entries) + 1)
         matching_entries = []
         for entry in entries:
-            if any([t.name.lower() in entry.summary.lower() for t in category.search_tags.all()]):
+            summary = [porter.stem(w) for w in (re.sub(html_cleaner_regex, ' ', entry.summary.lower()).split() + re.sub(html_cleaner_regex, ' ', entry.title.lower()).split())]
+            if any([t.name.lower() in summary for t in category_tags]):
                 matching_entries.append(entry)
             else:
                 chance = random.random()
                 if chance > add_treshold:
                     matching_entries.append(entry)
             add_treshold -= treshold_decrease
-
         return matching_entries
 
 
@@ -248,7 +251,7 @@ class FindSourcesView(GeneralView):
         form = FindSourceForm(request.POST)
         discovered_feeds = []
         if form.is_valid():
-            link = form.cleaned_data['link']
+            link = form.cleaned_data.get('link')
             discovered_feeds = self.get_all_rss(link)
             discovered_feeds = self.get_suggested_categories(discovered_feeds)
         form = DiscoveredSourceForm()
@@ -303,7 +306,7 @@ class FindSourcesView(GeneralView):
     def get_feed_categories(self, categories_tags={}, feed=''):
         feed_categories = []
         for key, value in categories_tags.items():
-            if self.check_category(value, feed['url']):
+            if self.check_category(value, feed.get('url')):
                 feed_categories.append(key)
         return feed_categories
 
