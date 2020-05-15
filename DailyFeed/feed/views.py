@@ -97,7 +97,7 @@ class CategoryView(GeneralView):
                          'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().timetuple())),
                          'website': urlparse(getattr(parsed_feed, 'link', getattr(e, 'link',  getattr(parsed_feed, 'href', "unknown")))).netloc
                          } for e in last_entries]
-        last_entries = [e for e in last_entries if current_year - int(e['published'].tm_year <= 1)]
+        last_entries = [e for e in last_entries if current_year - int(e.get('published').tm_year <= 1)]
         return last_entries
 
     def find_matching_entries(self, entries):
@@ -122,10 +122,10 @@ class CategoryView(GeneralView):
     def format_entries(self, entries):
         urls_to_reparse = ['feedproxy', 'rss']
         for entry in entries:
-            date_published = time.struct_time(tuple(entry['published'])) if isinstance(entry['published'], list) else entry['published']
+            date_published = time.struct_time(tuple(entry.get('published'))) if isinstance(entry['published'], list) else entry['published']
             entry['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)
-            if any([entry['website'].startswith(url) for url in urls_to_reparse]):
-                article = requests.get(entry['url'])
+            if any([entry.get('website',' ').startswith(url) for url in urls_to_reparse]):
+                article = requests.get(entry.get('url'))
                 entry['website'] = urlparse(article.url).netloc
         return entries
 
