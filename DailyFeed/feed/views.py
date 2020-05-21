@@ -6,6 +6,7 @@ import re
 import time
 import random
 import feedparser
+import pdb
 from bs4 import BeautifulSoup
 import requests
 from nltk.stem import PorterStemmer
@@ -94,7 +95,7 @@ class CategoryView(GeneralView):
                         {'url': getattr(e, 'link', '----'),
                          'title': getattr(e, 'title', '----'),
                          'summary': re.sub(html_cleaner_regex, ' ', getattr(e, 'summary', '-----')),
-                         'published': time.struct_time(getattr(e, 'published_parsed', False) or getattr(e, 'updated_parsed', datetime.datetime.now().timetuple())),
+                         'published': self.get_date(e),
                          'website': urlparse(getattr(parsed_feed, 'link', getattr(e, 'link',  getattr(parsed_feed, 'href', "unknown")))).netloc
                          } for e in last_entries]
         last_entries = [e for e in last_entries if current_year - int(e.get('published').tm_year <= 1)]
@@ -109,7 +110,7 @@ class CategoryView(GeneralView):
         matching_entries = []
         for entry in entries:
             summary = [porter.stem(w) for w in (re.sub(html_cleaner_regex, ' ', entry.summary.lower()).split() + re.sub(html_cleaner_regex, ' ', entry.title.lower()).split())]
-            if any([t.name.lower() in summary for t in category_tags]):
+            if any([t.name.lower() in summary for t in category_tags]) and entry.title != '':
                 matching_entries.append(entry)
             else:
                 chance = random.random()
@@ -122,12 +123,19 @@ class CategoryView(GeneralView):
     def format_entries(self, entries):
         urls_to_reparse = ['feedproxy', 'rss']
         for entry in entries:
-            date_published = time.struct_time(tuple(entry.get('published'))) if isinstance(entry['published'], list) else entry['published']
+            date_published = time.struct_time(tuple(entry.get('published'))) if isinstance(entry.get('published'), list) else entry.get('published')
             entry['published'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', date_published)
             if any([entry.get('website',' ').startswith(url) for url in urls_to_reparse]):
                 article = requests.get(entry.get('url'))
                 entry['website'] = urlparse(article.url).netloc
         return entries
+
+    def get_date(self, entry):
+        published_date = getattr(entry, 'published_parsed', False) or getattr(entry, 'updated_parsed', False)
+        if isinstance(published_date, time.struct_time):
+            return published_date
+        # pdb.set_trace()
+        return time.struct_time(datetime.datetime.now().replace(hour=0, minute=0, second=0).timetuple())
 
     def make_date_clear(self, entries):
         for entry in entries:
